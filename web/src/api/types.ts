@@ -53,6 +53,7 @@ export interface Channel {
   pay_types: string
   app_type?: string
   config: any
+  callback_url?: string
   rate: string | number
   daily_limit: string | number
   status: number

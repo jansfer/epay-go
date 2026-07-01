@@ -79,6 +79,10 @@ func main() {
 	notifyService := service.NewNotifyService()
 	go notifyService.StartNotifyWorker(ctx)
 
+	// 启动订单主动查单补偿工作协程
+	orderQueryService := service.NewOrderQueryService()
+	go orderQueryService.StartQueryWorker(ctx)
+
 	// 创建 HTTP 服务器
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	srv := &http.Server{

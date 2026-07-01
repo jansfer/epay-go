@@ -22,15 +22,16 @@ func NewChannelService() *ChannelService {
 
 // CreateChannelRequest 创建通道请求
 type CreateChannelRequest struct {
-	Name       string                 `json:"name" binding:"required"`
-	Plugin     string                 `json:"plugin" binding:"required"`
-	PayTypes   string                 `json:"pay_types"`
-	AppType    string                 `json:"app_type"`  // 支持的接口类型
-	Config     map[string]interface{} `json:"config"`
-	Rate       float64                `json:"rate"`
-	DailyLimit float64                `json:"daily_limit"`
-	Status     int8                   `json:"status"`
-	Sort       int                    `json:"sort"`
+	Name        string                 `json:"name" binding:"required"`
+	Plugin      string                 `json:"plugin" binding:"required"`
+	PayTypes    string                 `json:"pay_types"`
+	AppType     string                 `json:"app_type"` // 支持的接口类型
+	Config      map[string]interface{} `json:"config"`
+	CallbackURL string                 `json:"callback_url"` // 完整回调地址，留空则自动使用当前请求域名拼接
+	Rate        float64                `json:"rate"`
+	DailyLimit  float64                `json:"daily_limit"`
+	Status      int8                   `json:"status"`
+	Sort        int                    `json:"sort"`
 }
 
 // Create 创建通道
@@ -46,15 +47,16 @@ func (s *ChannelService) Create(req *CreateChannelRequest) (*model.Channel, erro
 	}
 
 	channel := &model.Channel{
-		Name:       req.Name,
-		Plugin:     req.Plugin,
-		PayTypes:   req.PayTypes,
-		AppType:    req.AppType,
-		Config:     configJSON,
-		Rate:       decimal.NewFromFloat(req.Rate),
-		DailyLimit: decimal.NewFromFloat(req.DailyLimit),
-		Status:     req.Status,
-		Sort:       req.Sort,
+		Name:        req.Name,
+		Plugin:      req.Plugin,
+		PayTypes:    req.PayTypes,
+		AppType:     req.AppType,
+		Config:      configJSON,
+		CallbackURL: req.CallbackURL,
+		Rate:        decimal.NewFromFloat(req.Rate),
+		DailyLimit:  decimal.NewFromFloat(req.DailyLimit),
+		Status:      req.Status,
+		Sort:        req.Sort,
 	}
 
 	if err := s.repo.Create(channel); err != nil {
@@ -71,14 +73,15 @@ func (s *ChannelService) GetByID(id int64) (*model.Channel, error) {
 
 // UpdateChannelRequest 更新通道请求
 type UpdateChannelRequest struct {
-	Name       string                 `json:"name"`
-	PayTypes   string                 `json:"pay_types"`
-	AppType    string                 `json:"app_type"`
-	Config     map[string]interface{} `json:"config"`
-	Rate       float64                `json:"rate"`
-	DailyLimit float64                `json:"daily_limit"`
-	Status     int8                   `json:"status"`
-	Sort       int                    `json:"sort"`
+	Name        string                 `json:"name"`
+	PayTypes    string                 `json:"pay_types"`
+	AppType     string                 `json:"app_type"`
+	Config      map[string]interface{} `json:"config"`
+	CallbackURL string                 `json:"callback_url"`
+	Rate        float64                `json:"rate"`
+	DailyLimit  float64                `json:"daily_limit"`
+	Status      int8                   `json:"status"`
+	Sort        int                    `json:"sort"`
 }
 
 // Update 更新通道
@@ -96,6 +99,9 @@ func (s *ChannelService) Update(id int64, req *UpdateChannelRequest) error {
 	}
 	if req.AppType != "" {
 		channel.AppType = req.AppType
+	}
+	if req.CallbackURL != "" {
+		channel.CallbackURL = req.CallbackURL
 	}
 	if req.Config != nil {
 		configJSON, err := json.Marshal(req.Config)

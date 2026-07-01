@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/example/epay-go/internal/database"
 	"github.com/example/epay-go/internal/model"
@@ -34,18 +35,18 @@ func NewOrderService() *OrderService {
 
 // CreateOrderRequest 创建订单请求
 type CreateOrderRequest struct {
-	MerchantID  int64             `json:"-"`
-	OutTradeNo  string            `json:"out_trade_no" binding:"required"`
-	Amount      decimal.Decimal   `json:"money" binding:"required"`
-	Name        string            `json:"name" binding:"required"`
-	PayType     string            `json:"type" binding:"required"` // alipay, wxpay
-	NotifyURL   string            `json:"notify_url" binding:"omitempty,url"`
-	MerchantNotifyURL string      `json:"-"`
-	PlatformBaseURL  string       `json:"-"`
-	ReturnURL   string            `json:"return_url" binding:"omitempty,url"`
-	ClientIP    string            `json:"-"`
-	PayMethod   string            `json:"pay_method"` // scan, h5, jsapi, web
-	Extra       map[string]string `json:"extra"`
+	MerchantID        int64             `json:"-"`
+	OutTradeNo        string            `json:"out_trade_no" binding:"required"`
+	Amount            decimal.Decimal   `json:"money" binding:"required"`
+	Name              string            `json:"name" binding:"required"`
+	PayType           string            `json:"type" binding:"required"` // alipay, wxpay
+	NotifyURL         string            `json:"notify_url" binding:"omitempty,url"`
+	MerchantNotifyURL string            `json:"-"`
+	PlatformBaseURL   string            `json:"-"`
+	ReturnURL         string            `json:"return_url" binding:"omitempty,url"`
+	ClientIP          string            `json:"-"`
+	PayMethod         string            `json:"pay_method"` // scan, h5, jsapi, web
+	Extra             map[string]string `json:"extra"`
 }
 
 // CreateOrderResponse 创建订单响应
@@ -84,6 +85,9 @@ func (s *OrderService) Create(ctx context.Context, req *CreateOrderRequest) (*Cr
 	fee := req.Amount.Mul(channel.Rate).Round(2)
 	realAmount := req.Amount
 
+	// 首次主动查单时间
+	firstQueryAt := FirstQueryAt(time.Now())
+
 	// 创建订单记录
 	order := &model.Order{
 		TradeNo:      tradeNo,
@@ -100,6 +104,7 @@ func (s *OrderService) Create(ctx context.Context, req *CreateOrderRequest) (*Cr
 		ClientIP:     req.ClientIP,
 		Status:       model.OrderStatusUnpaid,
 		NotifyStatus: model.NotifyStatusPending,
+		NextQueryAt:  &firstQueryAt,
 	}
 
 	if err := s.orderRepo.Create(order); err != nil {
@@ -116,6 +121,11 @@ func (s *OrderService) Create(ctx context.Context, req *CreateOrderRequest) (*Cr
 	if req.PlatformBaseURL != "" {
 		providerNotifyURL = strings.TrimRight(req.PlatformBaseURL, "/") + "/api/pay/notify/" + channel.Plugin
 	}
+	// 通道配置了回调URL时才覆盖；未配置(空字符串)则完全走上面的 Host 拼接逻辑，行为不变
+	if channel.CallbackURL != "" {
+		providerNotifyURL = channel.CallbackURL
+	}
+	log.Printf("Provider notify url resolved: trade_no=%s channel=%s url=%s", tradeNo, channel.Plugin, providerNotifyURL)
 
 	payReq := &payment.CreateOrderRequest{
 		TradeNo:   tradeNo,
@@ -240,6 +250,7 @@ func (s *OrderService) CreateTestOrder(channelID int64, amount, payType, platfor
 
 	// 创建测试订单（挂载到现有商户）
 	tradeNo := utils.GenerateTradeNo()
+	firstQueryAt := FirstQueryAt(time.Now())
 	order := &model.Order{
 		TradeNo:      tradeNo,
 		OutTradeNo:   "TEST" + tradeNo,
@@ -254,6 +265,7 @@ func (s *OrderService) CreateTestOrder(channelID int64, amount, payType, platfor
 		ReturnURL:    "",
 		Status:       model.OrderStatusUnpaid,
 		NotifyStatus: model.NotifyStatusPending,
+		NextQueryAt:  &firstQueryAt,
 	}
 
 	if err := s.orderRepo.Create(order); err != nil {
@@ -269,6 +281,10 @@ func (s *OrderService) CreateTestOrder(channelID int64, amount, payType, platfor
 
 	// 调用支付接口
 	providerNotifyURL := strings.TrimRight(platformBaseURL, "/") + "/api/pay/notify/" + channel.Plugin
+	if channel.CallbackURL != "" {
+		providerNotifyURL = channel.CallbackURL
+	}
+	log.Printf("Provider notify url resolved: trade_no=%s channel=%s url=%s", tradeNo, channel.Plugin, providerNotifyURL)
 	payReq := &payment.CreateOrderRequest{
 		TradeNo:   tradeNo,
 		Amount:    amountDecimal,

@@ -130,6 +130,26 @@ func (r *OrderRepository) GetPendingNotifyOrders(limit int) ([]model.Order, erro
 	return orders, err
 }
 
+// GetPendingQueryOrders 获取待主动查询的未支付订单
+func (r *OrderRepository) GetPendingQueryOrders(limit int) ([]model.Order, error) {
+	var orders []model.Order
+	err := r.db.Where("status = ? AND next_query_at IS NOT NULL AND next_query_at <= ?",
+		model.OrderStatusUnpaid, time.Now()).
+		Limit(limit).Find(&orders).Error
+	return orders, err
+}
+
+// UpdateQueryStatus 更新主动查询进度
+func (r *OrderRepository) UpdateQueryStatus(tradeNo string, nextQueryAt *time.Time) error {
+	updates := map[string]interface{}{"query_count": gorm.Expr("query_count + 1")}
+	if nextQueryAt != nil {
+		updates["next_query_at"] = nextQueryAt
+	} else {
+		updates["next_query_at"] = gorm.Expr("NULL")
+	}
+	return r.db.Model(&model.Order{}).Where("trade_no = ?", tradeNo).Updates(updates).Error
+}
+
 // GetTodayStats 获取今日统计
 func (r *OrderRepository) GetTodayStats(merchantID *int64) (int64, decimal.Decimal, error) {
 	var count int64

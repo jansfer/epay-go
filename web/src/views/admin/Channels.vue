@@ -66,6 +66,13 @@
           </a-select>
         </a-form-item>
 
+        <a-form-item label="回调地址（可选）">
+          <a-input
+            v-model="form.callback_url"
+            placeholder="留空则自动使用当前访问域名拼接；如需自定义请填写完整地址，如 https://pay.example.com/api/pay/notify/alipay"
+          />
+        </a-form-item>
+
         <!-- 动态配置字段 -->
         <template v-if="currentPluginConfig">
           <a-divider>支付配置</a-divider>
@@ -199,6 +206,7 @@ const defaultForm = {
   plugin: '',
   pay_types: '',
   app_types: [] as string[],
+  callback_url: '',
   rate: 0,
   daily_limit: 0,
   sort: 0,
@@ -273,6 +281,7 @@ const handleEdit = async (record: Channel) => {
   form.plugin = record.plugin
   form.pay_types = record.pay_types
   form.app_types = record.app_type ? record.app_type.split(',') : []
+  form.callback_url = record.callback_url || ''
   form.rate = Number(record.rate)
   form.daily_limit = Number(record.daily_limit)
   form.sort = record.sort
@@ -298,6 +307,7 @@ const handleSubmit = async () => {
     plugin: form.plugin,
     pay_types: form.app_types.join(','),  // 使用选中的支付接口
     app_type: form.app_types.join(','),
+    callback_url: form.callback_url,
     rate: form.rate,
     daily_limit: form.daily_limit,
     sort: form.sort,

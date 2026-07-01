@@ -24,10 +24,12 @@ type Order struct {
 	ApiTradeNo   string          `gorm:"size:64" json:"api_trade_no"`
 	Buyer        string          `gorm:"size:64" json:"buyer"`
 	ClientIP     string          `gorm:"size:45" json:"client_ip"`
-	Status       int8            `gorm:"default:0;index" json:"status"` // 0未支付 1已支付 2已退款
+	Status       int8            `gorm:"default:0;index" json:"status"`  // 0未支付 1已支付 2已退款
 	NotifyStatus int8            `gorm:"default:0" json:"notify_status"` // 0未通知 1通知中 2已通知
 	NotifyCount  int             `gorm:"default:0" json:"notify_count"`
 	NextNotifyAt *time.Time      `json:"next_notify_at"`
+	QueryCount   int             `gorm:"default:0" json:"query_count"`
+	NextQueryAt  *time.Time      `json:"next_query_at"`
 	PaidAt       *time.Time      `json:"paid_at"`
 
 	// 关联
